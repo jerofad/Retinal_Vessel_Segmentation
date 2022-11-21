@@ -1,14 +1,18 @@
-
+import os
 import numpy as np
 from operator import add
 import torch.optim.optimizer
 from torch.utils.data import DataLoader
 from dataset import get_loader
 from tqdm import tqdm
-from loss import DiceBCELoss
+from loss.dice import DiceBCELoss
+from loss.soft_cldice import Soft_Dice_clDice
+from loss.topo_loss import TopoLoss
 from augmentaions import *
 from models import *
 from metrics import *
+import wandb
+
 
 class Trainer:
     def __init__(self, config):
@@ -23,32 +27,55 @@ class Trainer:
         self.batch_size = config["batch_size"]
         self.epochs = config["epochs"]
         self.model = None
+        self.loss_fn = config["loss_fn"]
         self.model_str = config["model"]
         self.data_str = config['data']
         self.result_path = config['result_path']
         self.mnv = Augmentations()
-        #TODO: change model_path name
-        self.predictor_name = f"{self.result_path}/No_Augmentation_{self.model_str}-{self.data_str}"
-   
+        # TODO: change model_path name
+        self.predictor_name = f"{self.result_path}/{self.model_str}/No_Augmentation_{self.loss_fn}-{self.data_str}"
+
+        # create directory if doens not exists.
+
+        if not os.path.exists(self.predictor_name):
+            os.makedirs(self.predictor_name)
+
         if self.model_str == "DeepLab":
             self.model = DeepLab().to(self.device)
         elif self.model_str == "TriUnet":
             self.model = TriUnet().to(self.device)
         elif self.model_str == "Unet":
             self.model = Unet().to(self.device)
+        elif self.model_str == "Unet++":
+            self.model = Unet(plusplus=True).to(self.device)
         elif self.model_str == "FPN":
             self.model = FPN().to(self.device)
+        elif self.model_str == "MANet":
+            self.model = MANet().to(self.device)
         else:
-            raise AttributeError("model_str not valid; choices are DeepLab, TriUnet, InductiveNet, FPN, Unet")
+            raise AttributeError(
+                "model_str not valid; choices are DeepLab, TriUnet, InductiveNet, FPN, Unet")
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), self.lr)
-        self.criterion = DiceBCELoss()
-        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(self.optimizer, T_0=50, T_mult=2)
-        self.train_loader, self.val_loader = get_loader(self.config)
+        if self.loss_fn == "DiceLoss":
+            self.criterion = DiceBCELoss()
+        elif self.loss_fn == "clDice":
+            self.criterion = Soft_Dice_clDice()
+        elif self.loss_fn == "topoloss":
+            self.criterion = TopoLoss()
+        else:
+            raise AttributeError(
+                f"Loss function {self.loss_fn} not valid: Choises are DiceLoss, clDice, topoloss")
 
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            self.optimizer, T_0=50, T_mult=2)
+        self.train_loader, self.val_loader = get_loader(self.config)
 
     def train_epoch(self):
         self.model.train()
+        # Track model gradient and parameters.
+        wandb.watch(self.model, self.criterion, log="all")
+
         losses = []
         for i, (x, y) in tqdm(enumerate(self.train_loader), total=len(self.train_loader)):
             image = x.to(self.device)
@@ -58,8 +85,10 @@ class Trainer:
             loss = self.criterion(output, mask)
             loss.backward()
             self.optimizer.step()
+            self.scheduler.step()
             losses.append(np.abs(loss.item()))
         return np.mean(losses)
+
 
     def train(self):
         best_val_loss = 10
@@ -78,12 +107,15 @@ class Trainer:
                 f" val_loss={val_loss} \t"
                 f" val_iou={mean_iou} \t"
             )
+            wandb.log({'epoch': i,
+                       'Train loss': training_loss,
+                       'Validation Loss': val_loss,
+                       'val_iou': mean_iou})
             if val_loss < best_val_loss:
                 data_str = f"Saving new best model. Valid loss improved from {best_val_loss:2.4f} to {val_loss:2.4f}"
                 print(data_str)
                 best_val_loss = val_loss
                 torch.save(self.model.state_dict(), self.predictor_name)
-
 
     def validate(self, epoch, plot=False):
         self.model.eval()
@@ -103,4 +135,3 @@ class Trainer:
                 ious = torch.cat((ious, batch_ious.flatten()))
         avg_val_loss = np.mean(losses)
         return avg_val_loss, ious
-

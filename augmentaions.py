@@ -23,8 +23,8 @@ class Augmentations(nn.Module):
         )
 
         self.geometric_augments = alb.Compose([alb.RandomRotate90(p=1),
-                                 alb.Flip(p=1),
-                                 alb.OpticalDistortion(distort_limit=1, p=1)])
+                                               alb.Flip(p=1),
+                                               alb.OpticalDistortion(distort_limit=1, p=1)])
 
     def forward(self, image, mask):
         augmented_imgs = torch.zeros_like(image)
@@ -36,5 +36,5 @@ class Augmentations(nn.Module):
             geoms = self.geometric_augments(image=pixelwise, mask=aug_mask)
             augmented_imgs[batch_idx] = torch.Tensor(geoms["image"].T)
             augmented_masks[batch_idx] = torch.Tensor(geoms["mask"].T)
-            
+
         return augmented_imgs, augmented_masks

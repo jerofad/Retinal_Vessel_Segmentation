@@ -4,13 +4,19 @@ import torch
 
 """
 Model wrappers
+    
 """
 
 
 class Unet(smp.Unet):
-    def __init__(self):
+    def __init__(self, plusplus=False):
         super(Unet, self).__init__()
-        self.model = smp.Unet(in_channels=3, classes=1, activation="sigmoid")
+        if plusplus:
+            self.model = smp.UnetPlusPlus(encoder_name='resnet34', in_channels=3,
+                                          classes=1, decoder_attention_type='scse', activation="sigmoid")
+        else:
+            self.model = smp.Unet(encoder_name='resnet34',
+                                  in_channels=3, classes=1, activation="sigmoid")
 
     def forward(self, x):
         return self.model.forward(x)
@@ -25,7 +31,24 @@ class Unet(smp.Unet):
 class FPN(smp.FPN):
     def __init__(self):
         super(FPN, self).__init__()
-        self.model = smp.FPN(in_channels=3, classes=1, activation="sigmoid")
+        self.model = smp.FPN(encoder_name='resnet34',
+                             in_channels=3, classes=1, activation="sigmoid")
+
+    def forward(self, x):
+        return self.model.forward(x)
+
+    def predict(self, x):
+        self.eval()
+        with torch.no_grad():
+            mask = self.forward(x)
+        return mask
+
+
+class MANet(smp.MAnet):
+    def __init__(self):
+        super(MANet, self).__init__()
+        self.model = smp.MAnet(encoder_name='resnet34',
+                               in_channels=3, classes=1, activation="sigmoid")
 
     def forward(self, x):
         return self.model.forward(x)
@@ -41,7 +64,7 @@ class DeepLab(smp.DeepLabV3):
     def __init__(self):
         super(DeepLab, self).__init__()
         self.model = smp.DeepLabV3(in_channels=3, classes=1, encoder_depth=3,
-                                       activation="sigmoid")
+                                   activation="sigmoid")
 
     def forward(self, x):
         return self.model.forward(x)
