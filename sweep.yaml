@@ -1,0 +1,17 @@
+program: sweep.py
+method: grid
+metric:
+  goal: minimize
+  name: loss
+parameters:
+  learning_rate:
+    values: [0.001, 0.005, 0.0005]
+  epochs:
+    value: [25, 50]
+  batch_size:
+    value: [4, 8]
+early_terminate:
+  type: hyperband
+  s: 2
+  eta: 3
+  max_iter: 27

@@ -29,26 +29,26 @@ def pipeline_tranforms():
 class FundusDataset(Dataset):
     """ This wworks for DRIVE and FIVES"""
 
-    def __init__(self, images_path, masks_path, augments=False):
+    def __init__(self, images_path, masks_path, config):
         self.images_path = images_path
         self.masks_path = masks_path
         self.common_transforms = pipeline_tranforms()
         self.process = Augmentations()
-        self.augments = augments
+        self.config = config
         self.n_samples = len(images_path)
 
     def __getitem__(self, index):
         """ Reading image """
         image = cv2.imread(self.images_path[index], cv2.IMREAD_COLOR)
-        image = cv2.resize(image, (512, 512))
-        image = image / 255.0  # (512, 512, 3)
+        image = cv2.resize(image, self.config['size'])
+        image = image / 255.0  # (512, 512, 3) Normalizing to range (0,1)
         image = np.transpose(image, (2, 0, 1))  # (3, 512, 512)
         image = image.astype(np.float32)
         image = torch.from_numpy(image)
 
         """ Reading mask """
         mask = cv2.imread(self.masks_path[index], cv2.IMREAD_GRAYSCALE)
-        mask = cv2.resize(mask, (512, 512))
+        mask = cv2.resize(mask,  self.config['size'])
         mask = mask / 255.0  # (512, 512)
         mask = np.expand_dims(mask, axis=0)  # (1, 512, 512)
         mask = mask.astype(np.float32)
@@ -101,7 +101,7 @@ def load_drive_images(config):
     return train_x, train_y, valid_x, valid_y
 
 
-def load_stare_images(config, path):
+def load_stare_images(config):
     train_x = sorted(glob(config['data_path'] + "STARE/train_data/*"))
     train_y = sorted(glob(config['data_path'] + "STARE/train_label/*"))
 
@@ -134,8 +134,8 @@ def get_loader(config):
     
     train_x, train_y, valid_x, valid_y = get_data(config)
 
-    train_dataset = FundusDataset(train_x, train_y, augments=True)
-    val_dataset = FundusDataset(valid_x, valid_y, augments=False)
+    train_dataset = FundusDataset(train_x, train_y, config)
+    val_dataset = FundusDataset(valid_x, valid_y, config)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True,
                                                drop_last=True, num_workers=config['num_workers'])

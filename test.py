@@ -25,8 +25,8 @@ class Tester:
         self.model_str = config["model"]
         self.data_str = config['data']
         self.result_path = config['result_path']
-
-        self.predictor_name = f"{self.result_path}/{self.model_str}/No_Augmentation_{self.loss_fn}-{self.data_str}"
+        self.predictor_name = f"{self.result_path}/{self.model_str}/{self.data_str}/No_Augmentation_{self.loss_fn}"
+        # self.predictor_name = f"{self.result_path}/{self.model_str}/No_Augmentation_{self.loss_fn}-{self.data_str}"
 
         if self.model_str == "DeepLab":
             self.model = DeepLab().to(self.device)
@@ -64,7 +64,7 @@ class Tester:
 
         metrics_score = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         time_taken = []
-        for i, (x, y) in tqdm(enumerate(zip(self.test_x, self.test_y)), total=len(self.configtest_x)):
+        for i, (x, y) in tqdm(enumerate(zip(self.test_x, self.test_y)), total=len(self.test_x)):
 
             """ read and process image """
             image, mask = read_image(x, y)
@@ -81,15 +81,12 @@ class Tester:
                 score = calculate_metrics(y, pred_y)
                 metrics_score = list(map(add, metrics_score, score))
 
-        for i in metrics_score:
-            metrics_score[i] = metrics_score[i]/len(self.test_x)
-
-        jaccard = metrics_score[0]
-        f1 = metrics_score[1]
-        recall = metrics_score[2]
-        precision = metrics_score[3]
-        acc = metrics_score[4]
-        roc_auc = metrics_score[5]
+        jaccard = metrics_score[0]/len(self.test_x)
+        f1 = metrics_score[1]/len(self.test_x)
+        recall = metrics_score[2]/len(self.test_x)
+        precision = metrics_score[3]/len(self.test_x)
+        acc = metrics_score[4]/len(self.test_x)
+        roc_auc = metrics_score[5]/len(self.test_x)
 
         # Log metrics
         wandb.log({"Jaccard": jaccard, "F1": f1, "Recall": recall,

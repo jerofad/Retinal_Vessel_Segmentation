@@ -79,63 +79,63 @@ import random
 
 # samples = random.sample(zip(test_x, test_y), 10)
 
-data_str = "chase"
-test_x, test_y = load_chase_images()
+# data_str = "chase"
+# test_x, test_y = load_chase_images()
 
-def return_pred(x, model):
-    with torch.no_grad():
-        """ Prediction and Calculating FPS """
-        pred_y = model.predict(x)
+# def return_pred(x, model):
+#     with torch.no_grad():
+#         """ Prediction and Calculating FPS """
+#         pred_y = model.predict(x)
 
-        pred_y = pred_y[0].cpu().numpy()        ## (1, 512, 512)
-        pred_y = np.squeeze(pred_y, axis=0)     ## (512, 512)
-        pred_y = pred_y > 0.5
-        pred_y = np.array(pred_y, dtype=np.uint8)
+#         pred_y = pred_y[0].cpu().numpy()        ## (1, 512, 512)
+#         pred_y = np.squeeze(pred_y, axis=0)     ## (512, 512)
+#         pred_y = pred_y > 0.5
+#         pred_y = np.array(pred_y, dtype=np.uint8)
 
-    return pred_y
+#     return pred_y
 
-models = [DeepLab, FPN, Unet]
-model_names = ["DeepLab", "FPN", "Unet"]
-# x_sub, y_sub = zip(*random.sample(list(zip(test_x, test_y)), 5))
-data, label = zip(*random.sample(list(zip(test_x, test_y)), 5))
-# print(len(x), len(y))
+# models = [DeepLab, FPN, Unet]
+# model_names = ["DeepLab", "FPN", "Unet"]
+# # x_sub, y_sub = zip(*random.sample(list(zip(test_x, test_y)), 5))
+# data, label = zip(*random.sample(list(zip(test_x, test_y)), 5))
+# # print(len(x), len(y))
 
-for i, (x,y) in enumerate(zip(data, label)) :
+# for i, (x,y) in enumerate(zip(data, label)) :
 
-    """ Extract the name """
-    name = x.split("/")[-1].split(".")[0]
+#     """ Extract the name """
+#     name = x.split("/")[-1].split(".")[0]
 
-    """ read and process image """
-    image, mask = read_image(x, y)
-    x, y = process_image(image, mask)
+#     """ read and process image """
+#     image, mask = read_image(x, y)
+#     x, y = process_image(image, mask)
 
-    """ get predictions """
+#     """ get predictions """
     
-    predictions = {}
-    for  (modelname, model_constructor) in zip(model_names, models):
-        try: 
-            state_fname = f"results/No_Augmentation_{modelname}-{data_str}" #name of file 
-            model = model_constructor().to(device)
-            model.load_state_dict(torch.load(state_fname, map_location=device))
-        except FileNotFoundError:
-            print(f"{state_fname} not found, continuing...")
-            continue
-        prediction = return_pred(x, model)
-        predictions[modelname] = prediction
+#     predictions = {}
+#     for  (modelname, model_constructor) in zip(model_names, models):
+#         try: 
+#             state_fname = f"results/No_Augmentation_{modelname}-{data_str}" #name of file 
+#             model = model_constructor().to(device)
+#             model.load_state_dict(torch.load(state_fname, map_location=device))
+#         except FileNotFoundError:
+#             print(f"{state_fname} not found, continuing...")
+#             continue
+#         prediction = return_pred(x, model)
+#         predictions[modelname] = prediction
 
-    """ Visualization """
-    fig, axes = plt.subplots(nrows=1, ncols=2+len(predictions), figsize=(10, 5))
-    axes[0].imshow(image)
-    axes[0].title.set_text(f"Original Image")
-    axes[0].axis("off"); 
-    axes[1].imshow(mask_parse(mask))
-    axes[1].title.set_text(f"Ground Truth")
-    axes[1].axis("off")
-    for i, (k, v) in enumerate(predictions.items()):
-        print
-        axes[i+2].imshow(mask_parse(predictions[k])*255, cmap="seismic")
-        axes[i+2].title.set_text(f"{k} Prediction")
-        axes[i+2].axis("off")
+#     """ Visualization """
+#     fig, axes = plt.subplots(nrows=1, ncols=2+len(predictions), figsize=(10, 5))
+#     axes[0].imshow(image)
+#     axes[0].title.set_text(f"Original Image")
+#     axes[0].axis("off"); 
+#     axes[1].imshow(mask_parse(mask))
+#     axes[1].title.set_text(f"Ground Truth")
+#     axes[1].axis("off")
+#     for i, (k, v) in enumerate(predictions.items()):
+#         print
+#         axes[i+2].imshow(mask_parse(predictions[k])*255, cmap="seismic")
+#         axes[i+2].title.set_text(f"{k} Prediction")
+#         axes[i+2].axis("off")
     
-    # save image
-    fig.savefig(f"results/{data_str}/{name}.png") 
+#     # save image
+#     fig.savefig(f"results/{data_str}/{name}.png") 

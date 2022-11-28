@@ -3,6 +3,7 @@ from train import *
 from test import *
 import sys
 
+
 if __name__ == '__main__':
     model = sys.argv[1]
     data = sys.argv[2]
@@ -11,21 +12,25 @@ if __name__ == '__main__':
     configs = {"model": model,
                "data": data,
                "loss_fn": loss,
+               "size": (224, 224),
+               "augments": False,
                "data_path": '/mnt/qb/berens/users/jfadugba97/RetinaSegmentation/datasets/',
-               "result_path": '/mnt/qb/berens/users/jfadugba97/RetinaSegmentation/results/',
+               "result_path": '/mnt/qb/berens/users/jfadugba97/RetinaSegmentation/results',
                "device": "cuda",
-               "lr": 0.0001,
+               "lr": 0.05,
                "batch_size": 8,
-               "epochs": 5,
+               "epochs": 100,
                "num_workers": 2,
                }
 
     """
     Baseline Training
     """
-    run_name = f"{model}_{loss}_{data}"
-    wandb.init(project="vessel segmentation", config=configs, name=run_name)
-    trainer = Trainer(configs)
+    run_name = f"{configs['model']}_{configs['loss_fn']}_{configs['data']}"
+    print(run_name)
+    wandb.init(project="vessel segmentation final", config=configs,
+               name=run_name, dir=configs["result_path"])
+    trainer = Trainer(configs, sweep=False)
     trainer.train()
 
     # Run test script
