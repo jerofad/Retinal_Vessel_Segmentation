@@ -28,6 +28,23 @@ class Unet(smp.Unet):
         return mask
 
 
+class UnetPlusPlus(smp.Unet):
+    def __init__(self):
+        super(UnetPlusPlus, self).__init__()
+
+        self.model = smp.UnetPlusPlus(encoder_name='resnet34', in_channels=3,
+                                      classes=1, decoder_attention_type='scse', activation="sigmoid")
+
+    def forward(self, x):
+        return self.model.forward(x)
+
+    def predict(self, x):
+        self.eval()
+        with torch.no_grad():
+            mask = self.forward(x)
+        return mask
+
+
 class FPN(smp.FPN):
     def __init__(self):
         super(FPN, self).__init__()
