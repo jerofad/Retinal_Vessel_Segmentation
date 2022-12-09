@@ -3,7 +3,7 @@ import torch
 from skimage.morphology import skeletonize, skeletonize_3d
 from sklearn.metrics import accuracy_score, f1_score, jaccard_score, precision_score, recall_score
 from sklearn.metrics import auc, plot_precision_recall_curve, roc_auc_score
-
+from sklearn.metrics import jaccard_score
 
 
 

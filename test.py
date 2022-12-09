@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import numpy as np
 from operator import add
@@ -89,8 +90,8 @@ class Tester:
         roc_auc = metrics_score[5]/len(self.test_x)
 
         # Log metrics
-        wandb.log({"Jaccard": jaccard, "F1": f1, "Recall": recall,
-                  "Precesion": precision, "Accuracy": acc, "ROC-AUC": roc_auc})
+        # wandb.log({"Jaccard": jaccard, "F1": f1, "Recall": recall,
+        #           "Precesion": precision, "Accuracy": acc, "ROC-AUC": roc_auc})
 
         print(f"Results from {self.model_str} for {self.data_str} using {self.loss_fn}\n\n"
               f"Jaccard: {jaccard:1.4f} - F1: {f1:1.4f} - Recall: {recall:1.4f}\n"
