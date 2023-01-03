@@ -13,10 +13,10 @@ import PIL.Image
 from PIL.Image import open
 import torch
 from torch.utils.data import Dataset
+from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision import transforms
 from augmentaions import *
 from glob import glob
-
 
 
 def pipeline_tranforms():
@@ -130,20 +130,40 @@ def get_data(config):
 
     return train_x, train_y, valid_x, valid_y
 
+
 def get_loader(config):
-    
-    train_x, train_y, valid_x, valid_y = get_data(config)
 
-    train_dataset = FundusDataset(train_x, train_y, config)
-    val_dataset = FundusDataset(valid_x, valid_y, config)
+    train_x, train_y,_,_ = get_data(config, mode='train')
 
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config['batch_size'], shuffle=True, pin_memory=True,
-                                               drop_last=True, num_workers=config['num_workers'])
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=config['batch_size'], shuffle=False, drop_last=True,
-                                             pin_memory=True, num_workers=config['num_workers'])
+    full_dataset = FundusDataset(train_x, train_y, config)
+    # Split dataset into train and validation
 
-    print(f' Train size: {len(train_dataset)},\n'
-          f' Validation size: {len(val_dataset)},\n\n')
+    validation_split = .3
+    shuffle_dataset = True
+    random_seed = config['random_seed']
+    # Creating data indices for training and validation splits:
+    dataset_size = len(full_dataset)
+    indices = list(range(dataset_size))
+    split = int(np.floor(validation_split * dataset_size))
+    if shuffle_dataset:
+        np.random.seed(random_seed)
+        np.random.shuffle(indices)
+    train_indices, val_indices = indices[split:], indices[:split]
+
+    # Creating PT data samplers and loaders:
+    train_sampler = SubsetRandomSampler(train_indices)
+    valid_sampler = SubsetRandomSampler(val_indices)
+
+    # train_dataset = FundusDataset(train_x, train_y, config)
+    # val_dataset = FundusDataset(valid_x, valid_y, config)
+
+    train_loader = torch.utils.data.DataLoader(full_dataset, batch_size=config['batch_size'], pin_memory=True,
+                                               sampler=train_sampler, drop_last=True, num_workers=config['num_workers'])
+    val_loader = torch.utils.data.DataLoader(full_dataset, batch_size=config['batch_size'], drop_last=True,
+                                             sampler=valid_sampler, pin_memory=True, num_workers=config['num_workers'])
+
+    # print(f' Train size: {len(train_dataset)},\n'
+    #       f' Validation size: {len(val_dataset)},\n\n')
 
     return train_loader, val_loader
 
@@ -154,14 +174,29 @@ if __name__ == '__main__':
     data = sys.argv[1]
 
     config = {
-        "data": data,
-        "data_path": '/mnt/qb/berens/users/jfadugba97/RetinaSegmentation/datasets/',
-        "result_path": '/mnt/qb/berens/users/jfadugba97/RetinaSegmentation/results/',
-        "device": "cuda",
-        "lr": 0.0001,
-        "batch_size": 8,
-        "epochs": 1,
-        "num_workers": 2,
-    }
+               "data": data,
+               "size": (512, 512),
+               'random_seed':42,
+               "augments": False,
+               "aug_str":"No_Augmentation",
+               "data_path": '/mnt/qb/berens/users/jfadugba97/RetinaSegmentation/datasets/',
+               "result_path": '/mnt/qb/berens/users/jfadugba97/RetinaSegmentation/results',
+               "device": "cuda",
+               "lr": 0.001,
+               "batch_size": 4,
+               "epochs": 60,
+               "num_workers": 2,
+               }
 
-    _, _ = get_loader(config)
+    train_loader, val_loader = get_loader(config)
+    print(len(train_loader))
+    print(len(val_loader))
+
+    batch= iter(train_loader)
+    images, labels = batch.next()
+
+    print(images.shape)
+    # torch.Size([num_samples, in_channels, H, W])
+
+    print(labels.shape)
+    # print(train_loader.dataset.shape)
