@@ -14,8 +14,6 @@ from metrics import *
 import wandb
 
 
-
-
 class Trainer:
     def __init__(self, config, sweep=False):
         """
@@ -27,23 +25,24 @@ class Trainer:
         self.sweep = sweep
         self.device = config["device"]
         # We are tuning these parameters so we get them from wandb config
-        self.lr = wandb.config.learning_rate #config["learning_rate"]
+        self.lr = wandb.config.learning_rate  # config["learning_rate"]
         self.batch_size = wandb.config.batch_size
         self.epochs = wandb.config.epochs
-        
+
         self.model = None
         self.loss_fn = config["loss_fn"]
         self.model_str = config["model"]
         self.data_str = config['data']
         self.result_path = config['result_path']
-        self.predictor_name = f"{self.result_path}/{self.model_str}/{self.data_str}/No_Augmentation_{self.loss_fn}"
+        self.augment_str = config['aug_str']
+        self.predictor_name = f"{self.result_path}/{self.model_str}/{self.data_str}/{self.augment_str}_{self.loss_fn}.pth"
+
         if self.sweep:
-            self.predictor_name = f"{self.result_path}/{self.model_str}/{self.data_str}/No_Augmentation{self.loss_fn}_sweep"
+            self.predictor_name = f"{self.result_path}/{self.model_str}/{self.data_str}/{self.augment_str}_{self.loss_fn}_sweep.pth"
 
         # create directory if doens not exists.
         self.model_dir = f"{self.result_path}/{self.model_str}/{self.data_str}"
 
-        
         if not os.path.exists(self.model_dir):
             os.makedirs(self.model_dir)
 
@@ -54,7 +53,7 @@ class Trainer:
         elif self.model_str == "Unet":
             self.model = Unet().to(self.device)
         elif self.model_str == "Unet++":
-            self.model = Unet(plusplus=True).to(self.device)
+            self.model = UnetPlusPlus().to(self.device)
         elif self.model_str == "FPN":
             self.model = FPN().to(self.device)
         elif self.model_str == "MANet":
@@ -73,9 +72,9 @@ class Trainer:
         else:
             raise AttributeError(
                 f"Loss function {self.loss_fn} not valid: Choises are DiceLoss, clDice, topoloss")
-
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', 
-                                                           patience=5, verbose=True)
+        # TODO: Scheluder from the certainty estimation
+        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min',
+                                                                    patience=5, verbose=True)
 #         self.scheduler = torch.optim.lr_scheduler.MultiStepLR(
 #             self.optimizer, milestones=[30, 60, 90], gamma=0.1)
         # self.scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
@@ -126,6 +125,7 @@ class Trainer:
                 best_val_loss = val_loss
                 torch.save(self.model.state_dict(), self.predictor_name)
 
+
     def validate(self, epoch, plot=False):
         self.model.eval()
         losses = []
@@ -134,10 +134,7 @@ class Trainer:
             for x, y in self.val_loader:
                 image = x.to(self.device)
                 mask = y.to(self.device)
-                # aug_img, aug_mask = self.mnv(image, mask)
                 output = self.model(image)
-                # aug_output = self.model(aug_img)
-
                 batch_ious = torch.mean(iou(output, mask))
                 loss = self.criterion(output, mask)
                 losses.append(np.abs(loss.item()))

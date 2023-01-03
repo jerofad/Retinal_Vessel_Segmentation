@@ -19,9 +19,22 @@ H = 224
 W = 224
 size = (W, H)
 
+# pre-processing Technique
 
-def read_image(x,y):
+# CLAHE
+def clahe_equalized(image):  
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    clahe = cv2.createCLAHE(clipLimit=1.5,tileGridSize=(8,8))
+    lab[...,0] = clahe.apply(lab[...,0])
+    bgr = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+    bgr = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+    return bgr 
+
+
+def read_image(x,y, pre_process=None):
     image = cv2.imread(x, cv2.IMREAD_COLOR) ## (512, 512, 3)
+    if pre_process:
+        image = clahe_equalized(image)
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image = cv2.resize(image, size)
 
@@ -55,6 +68,7 @@ def mask_parse(mask):
     mask = np.expand_dims(mask, axis=-1)    ## (512, 512, 1)
     mask = np.concatenate([mask, mask, mask], axis=-1)  ## (512, 512, 3)
     return mask
+
 
 
 # # FPN 

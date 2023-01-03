@@ -1,5 +1,3 @@
-import os
-import sys
 import time
 import numpy as np
 from operator import add
@@ -10,7 +8,6 @@ from augmentaions import *
 from models import *
 from metrics import *
 from utils import read_image, process_image
-import wandb
 
 
 class Tester:
@@ -26,7 +23,8 @@ class Tester:
         self.model_str = config["model"]
         self.data_str = config['data']
         self.result_path = config['result_path']
-        self.predictor_name = f"{self.result_path}/{self.model_str}/{self.data_str}/No_Augmentation_{self.loss_fn}"
+        self.augment_str = config['aug_str']
+        self.predictor_name = f"{self.result_path}/{self.model_str}/{self.data_str}/{self.augment_str}_{self.loss_fn}.pth"
         # self.predictor_name = f"{self.result_path}/{self.model_str}/No_Augmentation_{self.loss_fn}-{self.data_str}"
 
         if self.model_str == "DeepLab":
@@ -69,6 +67,7 @@ class Tester:
 
             """ read and process image """
             image, mask = read_image(x, y)
+            
             x, y = process_image(image, mask)
 
             with torch.no_grad():
@@ -88,10 +87,6 @@ class Tester:
         precision = metrics_score[3]/len(self.test_x)
         acc = metrics_score[4]/len(self.test_x)
         roc_auc = metrics_score[5]/len(self.test_x)
-
-        # Log metrics
-        # wandb.log({"Jaccard": jaccard, "F1": f1, "Recall": recall,
-        #           "Precesion": precision, "Accuracy": acc, "ROC-AUC": roc_auc})
 
         print(f"Results from {self.model_str} for {self.data_str} using {self.loss_fn}\n\n"
               f"Jaccard: {jaccard:1.4f} - F1: {f1:1.4f} - Recall: {recall:1.4f}\n"
