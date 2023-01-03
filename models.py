@@ -9,14 +9,11 @@ Model wrappers
 
 
 class Unet(smp.Unet):
-    def __init__(self, plusplus=False):
+    def __init__(self):
         super(Unet, self).__init__()
-        if plusplus:
-            self.model = smp.UnetPlusPlus(encoder_name='resnet34', in_channels=3,
-                                          classes=1, decoder_attention_type='scse', activation="sigmoid")
-        else:
-            self.model = smp.Unet(encoder_name='resnet34',
-                                  in_channels=3, classes=1, activation="sigmoid")
+
+        self.model = smp.Unet(encoder_name='resnet34',
+                              in_channels=3, classes=1, activation="sigmoid")
 
     def forward(self, x):
         return self.model.forward(x)
@@ -28,7 +25,7 @@ class Unet(smp.Unet):
         return mask
 
 
-class UnetPlusPlus(smp.Unet):
+class UnetPlusPlus(smp.UnetPlusPlus):
     def __init__(self):
         super(UnetPlusPlus, self).__init__()
 
